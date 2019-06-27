@@ -1,57 +1,77 @@
-const token = require('../contracts/ERC20');
-const captable = require('../contracts/captable');
+const token = require('../contracts/SecuredToken');
 const securityLogic = require('../contracts/securityLogic');
+const captable = require('../contracts/captable');
 
 const { web3, Tx } = require("../includes/web3")
 
-const { sendSignedTransactionsForContracts } = require('../includes/sendSignedTransactions')
+const { sendSignedTransactionsForContracts, sendSignedTransactionsForMethods } = require('../includes/sendSignedTransactions')
 
 const tokenInstance = new web3.eth.Contract(token.abi);
-const captableInstance = new web3.eth.Contract(captable.abi);
 const securityLogicInstance = new web3.eth.Contract(securityLogic.abi);
 
 
+const captable_address = "0xbA31e58E23D48d477c156Ed1c052a88756b341AE"
 
 async function deploy(req, res) {
-    let senderAddress = '0x8F98d68a1b1994584B1AA00751F5dE2DDa60E4d4';
-    let senderPrivateKey =
-        '1A34E1E588F8FCAE4BB04FBBB69A9CEA48D09F8E01354388EC5F9D7C5DC95DAE';
-
     // let owner = req.body.owner;
-    let name = req.body.name;
-    let symbol = req.body.symbol;
-    let decimals = req.body.decimals;
-    let supply = req.body.totalSupply;
+    const name = req.body.name;
+    const symbol = req.body.symbol;
+    const decimals = req.body.decimals;
+    const supply = req.body.totalSupply;
+    const manager = req.body.manager;
+    const owner = req.body.owner;
+    const resolver = req.body.resolver;
+
 
     if (
-        !senderAddress ||
-        !senderPrivateKey ||
         !name ||
         !symbol ||
         !supply ||
-        // !tokenLogic ||
-        // !owner ||
+        !manager ||
+        !owner ||
+        !resolver ||
         !decimals
     ) {
         return res.status(200).send({ message: 'data insufficient' });
     }
 
 
-    let captableABI = captableInstance.deploy({
-        data: captable.bytecode,
-    }).encodeABI();
+    try {
 
-    const captable_result = await sendSignedTransactionsForContracts(captableABI, senderAddress, senderPrivateKey, res)
+        let logic_address = await deploySecurityInstance(supply, manager, owner, resolver, res);
 
-    // res.send(captable_result)
 
-    let logicABI = securityLogicInstance.deploy({
-        data: captable.bytecode,
-        arguments: [tokenLogic, owner, name, symbol, decimals, supply]
+        // res.send(logic_instance)
+        let tokenABI = tokenInstance
+            .deploy({
+                data: token.bytecode,
+                arguments: [logic_address + '', owner, name, symbol, decimals]
+            })
+            .encodeABI();
 
-    }).encodeABI();
 
-    const logic_result = await sendSignedTransactionsForContracts(captableABI, senderAddress, senderPrivateKey, res)
+        let result = await sendSignedTransactionsForContracts(tokenABI)
+
+        res.send(result)
+
+
+
+
+    } catch (err) { res.send({ "Error : ": err.message }) }
+
+
+
+
+
+
+
+    // let logicABI = securityLogicInstance.deploy({
+    //     data: captable.bytecode,
+    //     arguments: [tokenLogic, owner, name, symbol, decimals, supply]
+
+    // }).encodeABI();
+
+    // const logic_result = await sendSignedTransactionsForContracts(captableABI)
 
 
     // let token = tokenInstance
@@ -67,6 +87,25 @@ async function deploy(req, res) {
     // res.se?nd(result)
 }
 
+async function deploySecurityInstance(supply, manager, owner, resolver, res) {
+    const index = await initializeCaptable(supply, manager);
+    let logicABI = securityLogicInstance.deploy({
+        data: securityLogic.bytecode,
+        arguments: [index, captable_address, owner, resolver]
+    }).encodeABI();
+    const logic_result = await sendSignedTransactionsForContracts(logicABI);
+    return (logic_result);
+}
+
+async function initializeCaptable(supply, manager) {
+    const captableInstance = await new web3.eth.Contract(captable.abi, captable_address);
+
+    let initialize = captableInstance.methods.initialize(supply, manager);
+    let captableABI = await initialize.encodeABI();
+    const result = await sendSignedTransactionsForMethods(captableABI, captable_address);
+    // res.send(result.logs[0].data)
+    return web3.utils.fromWei(result.logs[0].data + '', "wei");
+}
 
 
 

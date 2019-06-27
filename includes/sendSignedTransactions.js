@@ -1,12 +1,16 @@
 const { web3, Tx } = require("../includes/web3")
 
 
+let senderAddress = '0x8F98d68a1b1994584B1AA00751F5dE2DDa60E4d4';
+let senderPrivateKey =
+    '1A34E1E588F8FCAE4BB04FBBB69A9CEA48D09F8E01354388EC5F9D7C5DC95DAE';
 
-async function sendSignedTransactionsForContracts(data, senderAddress, senderPrivateKey, res) {
+
+async function sendSignedTransactionsForContracts(data) {
     let txObject = {};
     let nonce = null;
     let gasPrice = null;
-    return new Promise(async resolve => {
+    return new Promise(async (resolve, reject) => {
 
         await Promise.all([web3.eth.getTransactionCount(senderAddress), web3.eth.getGasPrice()])
             .then(result => {
@@ -39,7 +43,7 @@ async function sendSignedTransactionsForContracts(data, senderAddress, senderPri
                             if (error) {
                                 clearInterval(getTransaction)
                                 // console.log({ 'errrr': error })
-                                res.send({ 'errrr': error })
+                                reject(new Error(error))
                             }
 
                             if (result) {
@@ -47,7 +51,7 @@ async function sendSignedTransactionsForContracts(data, senderAddress, senderPri
                                 // console.log("Transaction result ....", result)
 
                                 // console.log({ "address": result.contractAddress + '', "transaction_hash": txHash + '' })
-                                resolve({ "address": result.contractAddress + '', "transaction_hash": txHash + '' })
+                                resolve(result.contractAddress)
 
 
                             }
@@ -72,9 +76,9 @@ async function sendSignedTransactionsForContracts(data, senderAddress, senderPri
 }
 
 
-async function sendSignedTransactionsForMethods(data, senderAddress, senderPrivateKey, res, contract_address) {
+async function sendSignedTransactionsForMethods(data, contract_address) {
 
-    return new Promise(async resolve => {
+    return new Promise(async (resolve, reject) => {
 
         Promise.all([web3.eth.getTransactionCount(senderAddress), web3.eth.getGasPrice()])
             .then(result => {
@@ -101,13 +105,13 @@ async function sendSignedTransactionsForMethods(data, senderAddress, senderPriva
                                     if (error) {
                                         clearInterval(getTransaction)
                                         // console.log({ 'errrr': error })
-                                        res.send({ 'errrr': error })
+                                        reject(new Error(error))
                                     }
 
                                     if (result) {
                                         clearInterval(getTransaction)
                                         // console.log({ "address": result.contractAddress + '', "transaction_hash": txHash + '' })
-                                        resolve({ "result": result, "transaction_hash": txHash + '' })
+                                        resolve(result)
                                     }
 
 
