@@ -73,50 +73,55 @@ async function sendSignedTransactionsForContracts(data, senderAddress, senderPri
 
 
 async function sendSignedTransactionsForMethods(data, senderAddress, senderPrivateKey, res, contract_address) {
-    Promise.all([web3.eth.getTransactionCount(senderAddress), web3.eth.getGasPrice()])
-        .then(result => {
-            nonce = result[0];
-            const tx = {
-                nonce: web3.utils.toHex(nonce),
 
-                from: senderAddress,
-                to: contract_address,
-                gas: 2000000,
-                data: data,
-            };
+    return new Promise(async resolve => {
 
+        Promise.all([web3.eth.getTransactionCount(senderAddress), web3.eth.getGasPrice()])
+            .then(result => {
+                nonce = result[0];
+                const tx = {
+                    nonce: web3.utils.toHex(nonce),
 
-            web3.eth.accounts.signTransaction(tx, senderPrivateKey).then(signed => {
-                const tran = web3.eth
-                    .sendSignedTransaction(signed.rawTransaction, async (err, txHash) => {
-                        console.log('err:', err, 'txHash:', txHash)
-                        // Use this txHash to find the contract on Etherscan!
+                    from: senderAddress,
+                    to: contract_address,
+                    gas: 2000000,
+                    data: data,
+                };
 
 
-                        let getTransaction = setInterval(async () => {
-                            await web3.eth.getTransactionReceipt(txHash, async function (error, result) {
-                                if (error) {
-                                    clearInterval(getTransaction)
-                                    // console.log({ 'errrr': error })
-                                    res.send({ 'errrr': error })
-                                }
-
-                                if (result) {
-                                    clearInterval(getTransaction)
-                                    // console.log({ "address": result.contractAddress + '', "transaction_hash": txHash + '' })
-                                    res.send({ "result": result, "transaction_hash": txHash + '' })
-                                }
+                web3.eth.accounts.signTransaction(tx, senderPrivateKey).then(signed => {
+                    const tran = web3.eth
+                        .sendSignedTransaction(signed.rawTransaction, async (err, txHash) => {
+                            console.log('err:', err, 'txHash:', txHash)
+                            // Use this txHash to find the contract on Etherscan!
 
 
+                            let getTransaction = setInterval(async () => {
+                                await web3.eth.getTransactionReceipt(txHash, async function (error, result) {
+                                    if (error) {
+                                        clearInterval(getTransaction)
+                                        // console.log({ 'errrr': error })
+                                        res.send({ 'errrr': error })
+                                    }
 
-                            });
-                        }, 600)
+                                    if (result) {
+                                        clearInterval(getTransaction)
+                                        // console.log({ "address": result.contractAddress + '', "transaction_hash": txHash + '' })
+                                        resolve({ "result": result, "transaction_hash": txHash + '' })
+                                    }
 
-                    });
 
-            });
 
-        })
+                                });
+                            }, 600)
+
+                        });
+
+                });
+
+            })
+    })
+
 
 
 }

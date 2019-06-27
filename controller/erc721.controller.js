@@ -58,11 +58,11 @@ async function mint(req, res) {
         // console.log(methodMetadata)
 
 
-        await sendSignedTransactionsForMethods(mintABI, senderAddress, senderPrivateKey, res, req.body.contract_address)
+        const data = await sendSignedTransactionsForMethods(mintABI, senderAddress, senderPrivateKey, res, req.body.contract_address)
 
 
 
-
+        res.send(data)
 
     } catch (err) { res.send({ "Error : ": err.message }) }
 
